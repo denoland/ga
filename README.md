@@ -25,7 +25,7 @@ You need to create the reporter function, and then call the reporter with
 information about the current request and response.
 
 ```ts
-import { createReporter } from "https://deno.land/x/ga/mod.ts";
+import { createReporter } from "https://deno.land/x/g_a/mod.ts";
 
 const reporter = createReporter();
 ```
@@ -35,9 +35,9 @@ If you are using the
 for HTTP servers, usage of the reporter would look something like this:
 
 ```ts
-import { createReporter } from "https://deno.land/x/ga/mod.ts";
+import { createReporter } from "https://deno.land/x/g_a/mod.ts";
 
-const reporter = createReporter();
+const ga = createReporter();
 
 for await (const conn of Deno.listen({ port: 0 })) {
   (async () => {
@@ -52,7 +52,7 @@ for await (const conn of Deno.listen({ port: 0 })) {
       } catch (e) {
         err = e;
       } finally {
-        await reporter(requestEvent.request, conn, response, start, err);
+        await ga(requestEvent.request, conn, response, start, err);
       }
     }
   })();
@@ -64,11 +64,11 @@ If you are using the
 then it would look something like this:
 
 ```ts
-import { createReporter } from "https://deno.land/x/ga/mod.ts";
+import { createReporter } from "https://deno.land/x/g_a/mod.ts";
 import { serve } from "https://deno.land/std/http/server.ts";
 import type { ConnInfo } from "https://deno.land/std/http/server.ts";
 
-const reporter = createReporter();
+const ga = createReporter();
 
 function handler(req: Request, conn: ConnInfo) {
   let err;
@@ -80,7 +80,7 @@ function handler(req: Request, conn: ConnInfo) {
   } catch (e) {
     err = e;
   } finally {
-    reporter(req, conn, res!, start, err);
+    ga(req, conn, res!, start, err);
   }
   return res!;
 }
@@ -94,13 +94,13 @@ If you are using [oak](https://deno.land/x/oak/), then
 `createReportMiddleware()` can be used to create middleware which will
 
 ```ts
-import { createReportMiddleware } from "https://deno.land/x/ga/mod.ts";
+import { createReportMiddleware } from "https://deno.land/x/g_a/mod.ts";
 import { Application } from "https://deno.land/x/oak/mod.ts";
 
-const report = createReportMiddleware();
+const ga = createReportMiddleware();
 const app = new Application();
 
-app.use(report);
+app.use(ga);
 // register additional middleware...
 
 app.listen({ port: 0 });

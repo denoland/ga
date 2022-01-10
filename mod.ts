@@ -61,6 +61,8 @@ export interface MetaData {
   documentTitle?: string;
 }
 
+/** The interface returned from `createReporter()` that is then called to
+ * enqueue measurement messages to be sent to Google Analytics. */
 export interface Reporter {
   /**
    * A reporter function which will asynchronously dispatch measurement messages
@@ -84,23 +86,11 @@ export interface Reporter {
   ): Promise<void>;
 }
 
-interface ReporterOptionsBase {
+/** Options which can be supplied to the `createReporter()` factory function. */
+export interface ReporterOptions {
   /** The batch Google Analytics endpoint to send messages to.  This defaults
    * to `https://www.google-analytics.com/batch`. */
   endpoint?: string;
-  /** The Google Analytics web property ID. This defaults to being read from the
-   * `GA_TRACKING_ID` environment variable. If neither the property ID is passed
-   * nor is the environment variable set, dispatching will be disabled. */
-  id?: string;
-  /** An optional function/method for logging warning messages generated from
-   * the library. This defaults to logging to `console.warn()`. */
-  log?(msg: string): void;
-  /** A boolean which defaults to `true` that indicates if the library should
-   * log warning messages or not. */
-  warn?: boolean;
-}
-
-export interface ReporterOptions extends ReporterOptionsBase {
   /** An optional callback which determines if a particular request should
    * generate a measurement message.
    *
@@ -109,6 +99,13 @@ export interface ReporterOptions extends ReporterOptionsBase {
    * @returns `true` if the request should generate a measurement, or `false`.
    */
   filter?(req: Request, res: Response): boolean;
+  /** The Google Analytics web property ID. This defaults to being read from the
+   * `GA_TRACKING_ID` environment variable. If neither the property ID is passed
+   * nor is the environment variable set, dispatching will be disabled. */
+  id?: string;
+  /** An optional function/method for logging warning messages generated from
+   * the library. This defaults to logging to `console.warn()`. */
+  log?(msg: string): void;
   /** An optional callback which provides optional data to enrich the
    * measurement message.
    *
@@ -117,9 +114,17 @@ export interface ReporterOptions extends ReporterOptionsBase {
    * @returns The meta data to enrich the measurement, or `undefined`.
    */
   metaData?(req: Request, res: Response): MetaData | undefined;
+  /** A boolean which defaults to `true` that indicates if the library should
+   * log warning messages or not. */
+  warn?: boolean;
 }
 
-export interface ReportMiddlewareOptions extends ReporterOptionsBase {
+/** Options which can be supplied to the `createReporterMiddleware()` factory
+ * function. */
+export interface ReportMiddlewareOptions {
+  /** The batch Google Analytics endpoint to send messages to.  This defaults
+   * to `https://www.google-analytics.com/batch`. */
+  endpoint?: string;
   /** An optional callback which determines if a particular request should
    * generate a measurement message.
    *
@@ -127,6 +132,13 @@ export interface ReportMiddlewareOptions extends ReporterOptionsBase {
    * @returns `true` if the request should generate a measurement, or `false`.
    */
   filter?(ctx: Context): boolean;
+  /** The Google Analytics web property ID. This defaults to being read from the
+   * `GA_TRACKING_ID` environment variable. If neither the property ID is passed
+   * nor is the environment variable set, dispatching will be disabled. */
+  id?: string;
+  /** An optional function/method for logging warning messages generated from
+   * the library. This defaults to logging to `console.warn()`. */
+  log?(msg: string): void;
   /** An optional callback which provides optional data to enrich the
    * measurement message.
    *
@@ -134,6 +146,9 @@ export interface ReportMiddlewareOptions extends ReporterOptionsBase {
    * @returns The meta data to enrich the measurement, or `undefined`.
    */
   metaData?(ctx: Context): MetaData | undefined;
+  /** A boolean which defaults to `true` that indicates if the library should
+   * log warning messages or not. */
+  warn?: boolean;
 }
 
 const encoder = new TextEncoder();
@@ -238,6 +253,62 @@ function toException(
 /** Create and return a function which will dispatch messages to Google
  * Analytics.
  *
+ * ### Examples
+ *
+ * #### Using `std/http`
+ *
+ * ```ts
+ * import { createReporter } from "https://deno.land/x/g_a/mod.ts";
+ * import { serve } from "https://deno.land/std/http/server.ts";
+ * import type { ConnInfo } from "https://deno.land/std/http/server.ts";
+ *
+ * const ga = createReporter();
+ *
+ * function handler(req: Request, conn: ConnInfo) {
+ *   let err;
+ *   let res: Response;
+ *   const start = performance.now();
+ *   try {
+ *     // processing of the request...
+ *     res = new Response();
+ *   } catch (e) {
+ *     err = e;
+ *   } finally {
+ *     ga(req, conn, res!, start, err);
+ *   }
+ *   return res!;
+ * }
+ *
+ * serve(handler);
+ * ```
+ *
+ * #### Using low level APIs
+ *
+ * ```ts
+ * import { createReporter } from "https://deno.land/x/g_a/mod.ts";
+ *
+ * const ga = createReporter();
+ *
+ * for await (const conn of Deno.listen({ port: 0 })) {
+ *   (async () => {
+ *     const httpConn = Deno.serveHttp(conn);
+ *     for await (const requestEvent of httpConn) {
+ *       let err;
+ *       const start = performance.now();
+ *       try {
+ *         // processing of the request...
+ *         const response = new Response();
+ *         await requestEvent.respondWith(response);
+ *       } catch (e) {
+ *         err = e;
+ *       } finally {
+ *         await ga(requestEvent.request, conn, response, start, err);
+ *       }
+ *     }
+ *   })();
+ * }
+ * ```
+ *
  * @param options an optional set of options the impact the behavior of the
  *                returned reporter.
  * @returns the reporter function used to enqueue messages to dispatch to Google
@@ -328,8 +399,25 @@ export function createReporter(options: ReporterOptions = {}): Reporter {
  * generate and send to Google Analytics measurements for each request handled
  * by an oak application.
  *
+ * ### Examples
+ *
+ * ```ts
+ * import { createReportMiddleware } from "https://deno.land/x/g_a/mod.ts";
+ * import { Application } from "https://deno.land/x/oak/mod.ts";
+ *
+ * const ga = createReportMiddleware();
+ * const app = new Application();
+ *
+ * app.use(ga);
+ * // register additional middleware...
+ *
+ * app.listen({ port: 0 });
+ * ```
+ *
  * @param options an optional set of options which affects the behavior of the
  *                returned middleware.
+ * @returns middleware which should be registered early in the stack with the
+ *          application.
  */
 export function createReportMiddleware(
   options: ReportMiddlewareOptions = {},
