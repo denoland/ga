@@ -147,7 +147,6 @@ Deno.test({
     controller.abort();
     assertEquals(logMsgs.length, 0);
     assertEquals(requests.length, 1);
-    console.log(requests[0]);
     assertEquals(Object.keys(requests[0]), [
       "v",
       "tid",
@@ -157,7 +156,6 @@ Deno.test({
       "dl",
       "exd",
       "exf",
-      "srt",
       "qt",
     ]);
     assertEquals(requests[0].v, "1");
