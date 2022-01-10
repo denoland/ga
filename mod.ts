@@ -365,16 +365,17 @@ export function createReporter(options: ReporterOptions = {}): Reporter {
       metaData(req, res) ??
         {};
     const exception = toException(status, statusText, error);
+    const hitType = exception != null ? "exception" : "pageview";
 
     const message = {
       v: 1, // version, should always be 1
       tid: id,
-      t: "pageview", // event type
+      t: hitType, // event type
       cid: await toDigest(ip), // GA requires `cid` to be set.
       uip: ip,
       dl: req.url,
       dt: documentTitle,
-      dr: req.headers.get("referrer"),
+      dr: req.headers.get("referer"),
       cm: campaignMedium,
       cs: campaignSource,
       ua: userAgent,
@@ -459,16 +460,17 @@ export function createReportMiddleware(
           metaData(ctx) ??
             {};
         const exception = toException(status, statusText, error);
+        const hitType = exception != null ? "exception" : "pageview";
 
         const message = {
           v: 1, // version, should always be 1
           tid: id,
-          t: "pageview", // event type
+          t: hitType, // event type
           cid: await toDigest(ip), // GA requires `cid` to be set.
           uip: ip,
           dl: ctx.request.url.toString(),
           dt: documentTitle,
-          dr: ctx.request.headers.get("referrer"),
+          dr: ctx.request.headers.get("referer"),
           cm: campaignMedium,
           cs: campaignSource,
           ua: ctx.request.headers.get("user-agent"),

@@ -123,6 +123,52 @@ Deno.test({
 });
 
 Deno.test({
+  name: "createReporter - exception",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  async fn() {
+    const [endpoint, controller, requests] = setup();
+    const logMsgs: string[] = [];
+    const report = createReporter({
+      id: "UA-XXXX-Y",
+      endpoint,
+      log(msg) {
+        logMsgs.push(msg);
+      },
+    });
+    const start = performance.now();
+    await report(
+      new Request("http://localhost/example"),
+      mockConn,
+      new Response(null, { status: 500 }),
+      start,
+    );
+    await delay(1_200);
+    controller.abort();
+    assertEquals(logMsgs.length, 0);
+    assertEquals(requests.length, 1);
+    assertEquals(Object.keys(requests[0]), [
+      "v",
+      "tid",
+      "t",
+      "cid",
+      "uip",
+      "dl",
+      "exd",
+      "exf",
+      "srt",
+      "qt",
+    ]);
+    assertEquals(requests[0].v, "1");
+    assertEquals(requests[0].tid, "UA-XXXX-Y");
+    assertEquals(requests[0].t, "exception");
+    assertEquals(requests[0].uip, "localhost");
+    assertEquals(requests[0].dl, "http://localhost/example");
+    assertEquals(requests[0].exd, "500 Internal Server Error");
+  },
+});
+
+Deno.test({
   name: "createReportMiddleware - basic usage",
   sanitizeOps: false,
   sanitizeResources: false,
@@ -141,6 +187,50 @@ Deno.test({
       path: "/example",
     });
     const next = createMockNext();
+    ctx.response.status = 200;
+    await mw(ctx, next);
+    await delay(1_200);
+    controller.abort();
+    assertEquals(logMsgs.length, 0);
+    assertEquals(requests.length, 1);
+    assertEquals(Object.keys(requests[0]), [
+      "v",
+      "tid",
+      "t",
+      "cid",
+      "uip",
+      "dl",
+      "srt",
+      "qt",
+    ]);
+    assertEquals(requests[0].v, "1");
+    assertEquals(requests[0].tid, "UA-XXXX-Y");
+    assertEquals(requests[0].t, "pageview");
+    assertEquals(requests[0].uip, "127.0.0.1");
+    assertEquals(requests[0].dl, "http://localhost/example");
+  },
+});
+
+Deno.test({
+  name: "createReportMiddleware - exception",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  async fn() {
+    const [endpoint, controller, requests] = setup();
+    const logMsgs: string[] = [];
+    const mw = createReportMiddleware({
+      id: "UA-XXXX-Y",
+      endpoint,
+      log(msg) {
+        logMsgs.push(msg);
+      },
+    });
+    const ctx = createMockContext({
+      ip: "127.0.0.1",
+      path: "/example",
+    });
+    ctx.response.status = 500;
+    const next = () => Promise.reject(new Error("thrown"));
     await mw(ctx, next);
     await delay(1_200);
     controller.abort();
@@ -160,8 +250,9 @@ Deno.test({
     ]);
     assertEquals(requests[0].v, "1");
     assertEquals(requests[0].tid, "UA-XXXX-Y");
-    assertEquals(requests[0].t, "pageview");
+    assertEquals(requests[0].t, "exception");
     assertEquals(requests[0].uip, "127.0.0.1");
     assertEquals(requests[0].dl, "http://localhost/example");
+    assertEquals(requests[0].exd, "500 Internal Server Error (Error: thrown)");
   },
 });
