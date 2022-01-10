@@ -1,5 +1,8 @@
 # ga
 
+[![oak ci](https://github.com/denoland/ga/workflows/ci/badge.svg)](https://github.com/denoland/ga)
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/g_a/mod.ts)
+
 Utilities for server side processing of Google Analytics in Deno CLI and Deploy.
 
 When you server side render pages, it can be more efficient to not add Google
