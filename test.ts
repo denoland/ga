@@ -51,7 +51,6 @@ function setup(): [string, AbortController, Record<string, string>[]] {
         }
       })();
     }
-    console.log("end server");
   })();
   return [server, controller, requests];
 }
@@ -156,6 +155,7 @@ Deno.test({
       "dl",
       "exd",
       "exf",
+      "srt",
       "qt",
     ]);
     assertEquals(requests[0].v, "1");
