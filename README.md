@@ -91,7 +91,7 @@ serve(handler);
 ### `createReportMiddleware()`
 
 If you are using [oak](https://deno.land/x/oak/), then
-`createReportMiddleware()` can be used to create middleware which will
+`createReportMiddleware()` can be used to create a middleware which will do the job:
 
 ```ts
 import { createReportMiddleware } from "https://deno.land/x/g_a/mod.ts";
